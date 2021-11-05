@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.example.lec6demo
 
 import org.junit.Test
 
