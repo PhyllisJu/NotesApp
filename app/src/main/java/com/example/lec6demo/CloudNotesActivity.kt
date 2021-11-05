@@ -28,7 +28,9 @@ class CloudNotesActivity : AppCompatActivity() {
     private lateinit var seeLocalNotesButton: Button
     private lateinit var cloudEditText: EditText
     private lateinit var cloudSaveButton: Button
+    private lateinit var newNoteButton: Button
 
+    private val notes : MutableList<Note> = mutableListOf()
     private val client = OkHttpClient()
     private val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
     private val noteJsonAdapter = moshi.adapter(Note::class.java)
@@ -51,9 +53,22 @@ class CloudNotesActivity : AppCompatActivity() {
         cloudSaveButton.setOnClickListener {
             runBlocking {
                 withContext(Dispatchers.IO) {
-                    // make networking request
+                    for (note in Repository.noteList) {
+                        updateNote(note)
+                    }
                 }
             }
+        }
+
+        newNoteButton = findViewById(R.id.newNoteButton)
+        newNoteButton.setOnClickListener {
+            val intent = Intent(this, EditNoteActivity::class.java)
+            intent.putExtra("body", "")
+            intent.putExtra("id", -1)
+            intent.putExtra("poster", "mp774")
+            intent.putExtra("title", "")
+            startActivity(intent)
+
         }
 
         recyclerView = findViewById(R.id.recyclerView)
@@ -64,17 +79,41 @@ class CloudNotesActivity : AppCompatActivity() {
 
     private fun populateNotesList() {
         // val requestGet
+        val requestGet = Request.Builder().url(BASE_URL + "posts/").build()
+        client.newCall(requestGet).enqueue(object: Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (!it.isSuccessful) {
+                        throw IOException("Network call unsuccessful")
+                    }
+                    val noteList = noteListJsonAdapter.fromJson(response.body!!.string())!!
+                    for (note in noteList) {
+                        notes.add(note)
+                    }
+                    adapter = NoteAdapter(notes)
+                    runOnUiThread {
+                        recyclerView.adapter = adapter
+                    }
+                }
+            }
+        })
     }
 
-    private fun updateNote(newNoteBody: String) {
-        val newNote = Note("foo", -1, "bar")
+    private fun updateNote(newNote: Note) {
         val requestPost = Request.Builder().url(BASE_URL + "posts/")
             .post(noteJsonAdapter.toJson(newNote).toRequestBody(("application/json; charset=utf-8").toMediaType())).build()
         client.newCall(requestPost).execute().use {
             if (!it.isSuccessful) {
                 // handle unsuccessful response
+                Log.e("NETWORK_ERROR", it.message)
+                throw IOException("Post unsuccessful")
             }
             val responseString = it.body!!.string()
+            Log.d("NETWORK_RESPONSE", responseString)
         }
     }
 }

@@ -3,4 +3,5 @@
     <string name="local_save">Save Changes Locally</string>
     <string name="see_local_notes">See Local Changes to Notes</string>
     <string name="cloud_save">Save Changes in Cloud</string>
+    <string name="cloud_back">See cloud notes</string>
 </resources>
